@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Đếm số lần click</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#94a3b8;--glass:rgba(255,255,255,0.03)}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    body{display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#071326,var(--bg));color:#e6eef6}
+    .card{width:min(720px,94vw);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:16px;padding:28px;box-shadow:0 10px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.04)}
+    h1{margin:0 0 8px;font-size:1.4rem}
+    p.lead{margin:0 0 20px;color:var(--muted)}
+    .counter{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+    .big{flex:1;min-width:160px;background:var(--card);padding:18px;border-radius:12px;text-align:center}
+    .big .number{font-size:2.8rem;font-weight:700}
+    .small{background:var(--glass);padding:12px;border-radius:10px;color:var(--muted);min-width:120px;text-align:center}
+    .actions{margin-top:18px;display:flex;gap:12px;flex-wrap:wrap}
+    button.btn{appearance:none;border:0;padding:14px 18px;border-radius:12px;font-weight:600;cursor:pointer}
+    button.primary{background:linear-gradient(90deg,var(--accent),#3b82f6);color:#042027}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+    .footer{margin-top:14px;color:var(--muted);font-size:0.92rem;display:flex;justify-content:space-between;gap:12px}
+    @media (max-width:420px){.big .number{font-size:2.2rem}.card{padding:18px}}
+  </style>
+</head>
+<body>
+  <main class="card" role="main">
+    <h1> Số lần click</h1>
+    <p class="lead">Nhấn nút bên dưới để tăng bộ đếm. Giá trị tổng được lưu trong <strong>localStorage</strong> (giữ qua tải lại trang).</p>
+
+    <section class="counter" aria-live="polite">
+      <div class="big" aria-label="Tổng số lần click">
+        <div style="font-size:0.9rem;color:var(--muted);">Tổng (lưu trong trình duyệt)</div>
+        <div id="total" class="number" aria-atomic="true">0</div>
+      </div>
+
+      <div class="small" aria-label="Số lần trong phiên">
+        <div style="font-size:0.8rem;color:var(--muted)">Phiên này</div>
+        <div id="session" style="font-size:1.6rem;font-weight:700">0</div>
+      </div>
+
+      <div class="small" aria-label="Lần nhấn bởi thiết bị khác (ví dụ nếu thêm mạng)">
+        <div style="font-size:0.8rem;color:var(--muted)">Mô tả</div>
+        <div style="font-size:1rem">Dễ tùy chỉnh</div>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button id="clickBtn" class="btn primary" aria-label="Nhấn để tăng bộ đếm">Nhấn tôi</button>
+      <button id="resetSession" class="btn ghost">Đặt lại phiên</button>
+      <button id="resetAll" class="btn ghost">Đặt lại tổng</button>
+    </div>
+
+    <div class="footer">
+      <div>Trạng thái: <span id="status">Sẵn sàng</span></div>
+      <div style="opacity:0.9">Phiên bản: 1.0</div>
+    </div>
+  </main>
+
+  <script>
+    (function(){
+      const KEY = 'clickCounter_total_v1';
+      const totalEl = document.getElementById('total');
+      const sessionEl = document.getElementById('session');
+      const statusEl = document.getElementById('status');
+      const btn = document.getElementById('clickBtn');
+      const resetSessionBtn = document.getElementById('resetSession');
+      const resetAllBtn = document.getElementById('resetAll');
+
+      let sessionCount = 0;
+
+      function readTotal(){
+        try{
+          const v = localStorage.getItem(KEY);
+          return v ? parseInt(v,10) : 0;
+        }catch(e){
+          console.warn('localStorage không khả dụng', e);
+          return 0;
+        }
+      }
+
+      function writeTotal(n){
+        try{
+          localStorage.setItem(KEY, String(n));
+          return true;
+        }catch(e){
+          console.warn('Lưu localStorage lỗi', e);
+          return false;
+        }
+      }
+
+      function render(){
+        totalEl.textContent = readTotal();
+        sessionEl.textContent = sessionCount;
+      }
+
+      btn.addEventListener('click', ()=>{
+        let total = readTotal();
+        total += 1;
+        sessionCount += 1;
+        const ok = writeTotal(total);
+        totalEl.textContent = total;
+        sessionEl.textContent = sessionCount;
+        statusEl.textContent = ok ? 'Đã lưu' : 'Không thể lưu (private mode?)';
+        // tiny click feedback
+        btn.animate([{transform:'scale(1)'},{transform:'scale(0.96)'},{transform:'scale(1)'}],{duration:160});
+      });
+
+      resetSessionBtn.addEventListener('click', ()=>{
+        sessionCount = 0; sessionEl.textContent = sessionCount; statusEl.textContent = 'Phiên đã đặt lại';
+      });
+
+      resetAllBtn.addEventListener('click', ()=>{
+        if(!confirm('Xác nhận đặt lại tổng bộ đếm?')) return;
+        writeTotal(0);
+        sessionCount = 0;
+        render();
+        statusEl.textContent = 'Tổng đã đặt lại';
+      });
+
+      // init
+      render();
+
+      // optional: sync across tabs
+      window.addEventListener('storage', (e)=>{
+        if(e.key === KEY){
+          totalEl.textContent = readTotal();
+          statusEl.textContent = 'Đã đồng bộ từ tab khác';
+        }
+      });
+
+    })();
+  </script>
+</body>
+</html>
